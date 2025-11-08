@@ -314,7 +314,7 @@ def generate_report_with_perplexity(
     
     print("[Call 2/2] Gathering market data, analyzing, and generating report...")
     
-    comprehensive_prompt = f"""You are an expert financial analyst creating a company credit score report.
+    comprehensive_prompt = f"""You are an expert financial analyst creating a financial health score report.
 
 COMPANY: {company_name}
 
@@ -350,7 +350,7 @@ Focus your search on real-time market data and recent analyst commentary.
 
 **Step 2: Analyze Holistically**
 
-Calculate company credit score (0-100) based on:
+Calculate financial health score (0-100) based on:
 
 **Financial Strength (0-30 points):**
 - Cash vs debt ratio
@@ -413,7 +413,7 @@ Think like a trader reading Bloomberg Terminal at 6am:
 <div class="company-name">{company_name.upper()}</div>
 </div>
 <div class="health-score-display">
-<div class="score-label">COMPANY CREDIT SCORE</div>
+<div class="score-label">FINANCIAL HEALTH SCORE</div>
 <div class="score-value">
 <span class="score-number">XX</span>
 <span class="score-max">/100</span>
