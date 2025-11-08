@@ -38,7 +38,7 @@ st.markdown("""
     .stApp, .stMarkdown, p, span, div, label {
         color: #FFFFFF !important;
         font-family: 'Courier New', monospace;
-        font-size: 1.3rem;
+        font-size: 1.4rem;
     }
     
     /* Headers - subtle, not flashy */
@@ -50,10 +50,11 @@ st.markdown("""
     }
     
     h1 {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-        border-bottom: 1px solid #333333;
-        padding-bottom: 0.5rem;
+        font-size: 2.2rem;
+        margin-bottom: 0.8rem;
+        border-bottom: 2px solid #FFAA00;
+        padding-bottom: 0.8rem;
+        letter-spacing: 0.2em;
     }
     
     h2 {
@@ -68,16 +69,17 @@ st.markdown("""
     .stTextInput > div > div > input {
         background-color: #000000;
         color: #FFFFFF;
-        border: 1px solid #333333;
+        border: 2px solid #333333;
         border-radius: 0;
         font-family: 'Courier New', monospace;
-        font-size: 1.1rem;
-        padding: 0.75rem;
+        font-size: 1.2rem;
+        padding: 0.85rem;
+        transition: all 0.3s ease;
     }
-    
+
     .stTextInput > div > div > input:focus {
-        border: 1px solid #666666;
-        box-shadow: none;
+        border: 2px solid #FFAA00;
+        box-shadow: 0 0 12px rgba(255, 170, 0, 0.3);
     }
     
     .stTextInput > label {
@@ -92,21 +94,24 @@ st.markdown("""
     .stButton > button {
         background-color: #000000;
         color: #FFFFFF;
-        border: 1px solid #FFFFFF;
+        border: 2px solid #FFFFFF;
         border-radius: 0;
-        padding: 0.75rem 2.5rem;
+        padding: 0.85rem 3rem;
         font-family: 'Courier New', monospace;
         font-size: 1.1rem;
-        font-weight: 400;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        transition: all 0.2s;
+        letter-spacing: 0.15em;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
     }
-    
+
     .stButton > button:hover {
         background-color: #FFAA00;
         color: #000000;
-        border: 1px solid #FFAA00;
+        border: 2px solid #FFAA00;
+        box-shadow: 0 4px 12px rgba(255, 170, 0, 0.4);
+        transform: translateY(-1px);
     }
     
     .stButton > button:active {
@@ -199,11 +204,11 @@ st.markdown("""
     .report-container {
         max-width: 1200px;  /* Wider - use full space */
         background: #0a0a0a;  /* Dark, not black - subtle */
-        padding: 2rem;
+        padding: 2.5rem;
         margin: 2rem auto;
         font-family: 'Courier New', monospace;  /* Match terminal */
-        font-size: 1.1rem;
-        line-height: 2.0;
+        font-size: 1.3rem;
+        line-height: 2.2;
         border: 1px solid #333333;  /* Subtle border */
         border-left: 3px solid #FFAA00;  /* Bloomberg orange accent */
     }
@@ -275,8 +280,8 @@ st.markdown("""
     .one-liner .info-text {
         display: block;
         color: #FFFFFF !important;
-        font-size: 1.05rem;
-        line-height: 1.7;
+        font-size: 1.2rem;
+        line-height: 1.9;
         padding-left: 1rem;
         border-left: 2px solid #333333;
     }
@@ -364,9 +369,9 @@ st.markdown("""
     }
     
     .threat-detail {
-        font-size: 1.0rem;
+        font-size: 1.2rem;
         color: #CCCCCC !important;
-        line-height: 1.6;
+        line-height: 1.8;
     }
     
     /* Section 4: Management Quote */
@@ -375,8 +380,8 @@ st.markdown("""
         background: #111111;
         border-left: 3px solid #666666;
         font-style: italic;
-        font-size: 1.05rem;
-        line-height: 1.9;
+        font-size: 1.3rem;
+        line-height: 2.0;
         color: #CCCCCC !important;
     }
     
@@ -458,9 +463,9 @@ st.markdown("""
     }
     
     .key-metric-explanation {
-        font-size: 1.05rem;
+        font-size: 1.3rem;
         color: #CCCCCC !important;
-        line-height: 1.7;
+        line-height: 2.0;
     }
     
     /* Mobile Responsive */
@@ -559,33 +564,38 @@ st.markdown("""
     /* Company Header */
     .company-header {
         text-align: center;
-        padding: 2rem 0 1rem 0;
-        border-bottom: 1px solid #333333;
-        margin-bottom: 2rem;
+        padding: 2.5rem 0 1.5rem 0;
+        border-bottom: 2px solid #FFAA00;
+        margin-bottom: 2.5rem;
+        background: linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
     }
-    
+
     .company-name {
-        font-size: 2rem;
+        font-size: 2.4rem;
         font-weight: 700;
         color: #FFAA00 !important;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.15em;
+        text-shadow: 0 2px 8px rgba(255, 170, 0, 0.3);
     }
     
     /* Score Display */
     .health-score-display {
         text-align: center;
-        padding: 3rem 0;
-        background: #111111;
-        border-left: 3px solid #FFAA00;
+        padding: 3.5rem 0;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+        border: 1px solid #333333;
+        border-left: 4px solid #FFAA00;
         margin-bottom: 3rem;
+        box-shadow: 0 4px 12px rgba(255, 170, 0, 0.1);
     }
     
     .score-label {
-        font-size: 0.85rem;
-        color: #999999 !important;
+        font-size: 1.0rem;
+        color: #FFAA00 !important;
         text-transform: uppercase;
-        letter-spacing: 0.15em;
+        letter-spacing: 0.2em;
         margin-bottom: 1.5rem;
+        font-weight: 700;
     }
     
     .score-value {
@@ -614,9 +624,11 @@ st.markdown("""
     
     /* Key Points */
     .key-points {
-        background: #111111;
-        padding: 2rem;
-        border-left: 3px solid #666666;
+        background: linear-gradient(135deg, #0a0a0a 0%, #151515 100%);
+        padding: 2.5rem;
+        border: 1px solid #333333;
+        border-left: 4px solid #666666;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
     
     .points-header {
@@ -664,8 +676,8 @@ st.markdown("""
     .point-text {
         flex: 1;
         color: #FFFFFF !important;
-        font-size: 1.3rem;
-        line-height: 1.8;
+        font-size: 1.5rem;
+        line-height: 2.0;
     }
     
     /* Mobile */
