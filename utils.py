@@ -421,7 +421,7 @@ Think like a trader reading Bloomberg Terminal at 6am:
 </div>
 </div>
 <div class="key-points">
-<div class="points-header">THE 5 THINGS YOU NEED TO KNOW:</div>
+<div class="points-header">5 Key Insights from Latest SEC Filings:</div>
 <div class="point-item positive">
 <span class="point-icon">✓</span>
 <div class="point-text">First verdict</div>
