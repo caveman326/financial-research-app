@@ -1,0 +1,41 @@
+# Copy & Paste These Commands - Ready to Go!
+
+## STEP 1: Create Private Repo on GitHub
+1. Go to: https://github.com/new
+2. Name: financial-research-app
+3. Set to: PRIVATE ✓
+4. Click "Create repository"
+
+## STEP 2: Run These Commands (Copy ALL of these into PowerShell)
+
+cd "C:\Users\John\Downloads\complete-financial-research-app"
+
+git init
+
+git config user.name "caveman326"
+git config user.email "jcdmastering@yahoo.com"
+
+git add .
+
+git commit -m "Initial commit: Financial research app with Perplexity AI"
+
+git branch -M main
+
+git remote add origin https://github.com/caveman326/financial-research-app.git
+
+git push -u origin main
+
+## You'll be prompted for GitHub credentials
+# Use your GitHub username: caveman326
+# Use your GitHub password or personal access token
+
+## DONE!
+# Your app is now on GitHub at:
+# https://github.com/caveman326/financial-research-app
+
+## For Netlify:
+# 1. Go to Netlify
+# 2. "Import from Git" → Select your private repo
+# 3. Build command: (leave empty for Streamlit)
+# 4. Deploy!
+
