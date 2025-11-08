@@ -102,6 +102,7 @@ st.markdown("""
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.15em;
+        white-space: nowrap;
         transition: all 0.3s ease;
         box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
     }
