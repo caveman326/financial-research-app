@@ -532,6 +532,27 @@ def identify_business_model(sector: str = "", industry: str = "") -> Dict[str, A
             "section_6_metric": "Net Interest Margin"
         }
 
+    # Energy / Oil & Gas
+    elif any(term in sector or term in industry for term in ["energy", "oil", "gas", "mining", "petroleum"]):
+        return {
+            "business_model": "Energy/Oil & Gas",
+            "section_6_metric": "Production Volume Growth"
+        }
+
+    # Healthcare / Pharma
+    elif any(term in sector or term in industry for term in ["healthcare", "pharmaceutical", "biotech", "medical"]):
+        return {
+            "business_model": "Healthcare/Pharma",
+            "section_6_metric": "R&D Efficiency"
+        }
+
+    # Telecommunications
+    elif any(term in sector or term in industry for term in ["telecom", "communication"]):
+        return {
+            "business_model": "Telecommunications",
+            "section_6_metric": "ARPU Growth"
+        }
+
     # Default: Generic
     else:
         return {
@@ -650,7 +671,7 @@ SOURCES USED:
 
     # Extract sector/industry from SEC data
     sec_lower = sec_data.lower()
-    sector_match = "Technology"  # Default
+    sector_match = ""  # Empty default, let identify_business_model decide
     industry_match = ""
 
     if "software" in sec_lower or "saas" in sec_lower or "cloud" in sec_lower:
@@ -665,6 +686,15 @@ SOURCES USED:
     elif "bank" in sec_lower or "financial services" in sec_lower:
         sector_match = "Financial"
         industry_match = "Banking"
+    elif "oil" in sec_lower or "energy" in sec_lower or "mining" in sec_lower or "petroleum" in sec_lower or "gas" in sec_lower:
+        sector_match = "Energy"
+        industry_match = "Oil & Gas"
+    elif "healthcare" in sec_lower or "pharmaceutical" in sec_lower or "biotech" in sec_lower or "medical" in sec_lower:
+        sector_match = "Healthcare"
+        industry_match = "Healthcare"
+    elif "telecom" in sec_lower or "communication" in sec_lower:
+        sector_match = "Communication"
+        industry_match = "Telecommunications"
 
     return {
         "sec_data": sec_data,
