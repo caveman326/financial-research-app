@@ -96,7 +96,7 @@ st.markdown("""
         color: #FFFFFF;
         border: 2px solid #FFFFFF;
         border-radius: 0;
-        padding: 0.85rem 3rem;
+        padding: 0.85rem 3.5rem;
         font-family: 'Courier New', monospace;
         font-size: 1.1rem;
         font-weight: 600;
@@ -105,6 +105,7 @@ st.markdown("""
         white-space: nowrap;
         transition: all 0.3s ease;
         box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+        min-width: 160px;
     }
 
     .stButton > button:hover {
@@ -713,11 +714,7 @@ st.markdown("---")
 # Disclaimer - minimal
 with st.expander("DISCLAIMER"):
     st.markdown("""
-    EDUCATIONAL ANALYSIS ONLY • NO INVESTMENT ADVICE
-    
-    This platform provides financial analysis for informational and educational purposes only.
-    Analysis is based on publicly available data and does not constitute investment advice.
-    Consult a qualified financial advisor before making investment decisions.
+    This Financial Health Score is a proprietary analytical tool based on publicly available SEC filings. It is not investment advice, not affiliated with credit rating agencies, and is for informational purposes only. Consult a financial adviser before making investment decisions.
     """)
 
 st.markdown("---")
@@ -842,21 +839,21 @@ if generate_button:
 
 if st.session_state.report_generated:
     st.markdown("---")
-    
-    # Download button - simplified (no WeasyPrint on Windows without GTK3)
-    col1, col2, col3 = st.columns([1, 1, 4])
-    with col1:
-        # Save as markdown file instead (WeasyPrint requires GTK3 runtime on Windows)
-        md_file_path = f"{company_name}_report.md"
-        st.download_button(
-            label="DOWNLOAD MD",
-            data=st.session_state.report_content,
-            file_name=md_file_path,
-            mime="text/markdown",
-            use_container_width=True,
-            help="Download as Markdown (PDF requires GTK3 runtime on Windows)"
-        )
-    
+
+    # Download button - disabled
+    # col1, col2, col3 = st.columns([1, 1, 4])
+    # with col1:
+    #     # Save as markdown file instead (WeasyPrint requires GTK3 runtime on Windows)
+    #     md_file_path = f"{company_name}_report.md"
+    #     st.download_button(
+    #         label="DOWNLOAD MD",
+    #         data=st.session_state.report_content,
+    #         file_name=md_file_path,
+    #         mime="text/markdown",
+    #         use_container_width=True,
+    #         help="Download as Markdown (PDF requires GTK3 runtime on Windows)"
+    #     )
+
     # Sources section - show web search sources
     if 'sources' in st.session_state and len(st.session_state.sources) > 0:
         with st.expander("📰 VIEW DATA SOURCES", expanded=False):
@@ -876,26 +873,26 @@ if st.session_state.report_generated:
                 if citation.get('text'):
                     st.caption(f"Referenced: \"{citation['text'][:100]}...\"")
     
-    # Debug section - show raw API calls and responses
-    if 'debug_api_calls' in st.session_state and len(st.session_state.debug_api_calls) > 0:
-        with st.expander("🔍 DEBUG: RAW PERPLEXITY API CALLS", expanded=False):
-            st.markdown(f"**{len(st.session_state.debug_api_calls)} API calls made:**")
-            
-            for i, call in enumerate(st.session_state.debug_api_calls, 1):
-                st.markdown(f"### Call {i}: {call['timestamp']}")
-                
-                st.markdown("**REQUEST:**")
-                st.json(call['request'])
-                
-                st.markdown("**RESPONSE:**")
-                st.code(call['response']['content'], language='text')
-                
-                if call['response'].get('citations'):
-                    st.markdown(f"**CITATIONS ({len(call['response']['citations'])}):**")
-                    for j, citation in enumerate(call['response']['citations'], 1):
-                        st.markdown(f"{j}. {citation}")
-                
-                st.markdown("---")
+    # Debug section - disabled
+    # if 'debug_api_calls' in st.session_state and len(st.session_state.debug_api_calls) > 0:
+    #     with st.expander("🔍 DEBUG: RAW PERPLEXITY API CALLS", expanded=False):
+    #         st.markdown(f"**{len(st.session_state.debug_api_calls)} API calls made:**")
+    #
+    #         for i, call in enumerate(st.session_state.debug_api_calls, 1):
+    #             st.markdown(f"### Call {i}: {call['timestamp']}")
+    #
+    #             st.markdown("**REQUEST:**")
+    #             st.json(call['request'])
+    #
+    #             st.markdown("**RESPONSE:**")
+    #             st.code(call['response']['content'], language='text')
+    #
+    #             if call['response'].get('citations'):
+    #                 st.markdown(f"**CITATIONS ({len(call['response']['citations'])}):**")
+    #                 for j, citation in enumerate(call['response']['citations'], 1):
+    #                     st.markdown(f"{j}. {citation}")
+    #
+    #             st.markdown("---")
     
     st.markdown("---")
     
