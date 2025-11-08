@@ -1,0 +1,52 @@
+# Push to GitHub - Copy & Paste These Commands
+
+## Step 1: Create a Private Repo on GitHub
+1. Go to: https://github.com/new
+2. Repository name: financial-research-app
+3. Set to: PRIVATE ✓
+4. DO NOT initialize with README (we already have one)
+5. Click "Create repository"
+
+## Step 2: Run These Commands (Copy & Paste into PowerShell)
+
+# Navigate to your project folder
+cd "C:\Users\John\Downloads\complete-financial-research-app"
+
+# Initialize git
+git init
+
+# Add all files
+git add .
+
+# Commit
+git commit -m "Initial commit: Financial research app"
+
+# Rename branch to main
+git branch -M main
+
+# Add your GitHub repo (REPLACE with your actual repo URL)
+git remote add origin https://github.com/YOUR_USERNAME/financial-research-app.git
+
+# Push to GitHub
+git push -u origin main
+
+## Done!
+
+Your app is now on GitHub as a private repo.
+
+## What Gets Uploaded:
+✅ app.py
+✅ utils.py
+✅ requirements.txt
+✅ README.md
+✅ .gitignore
+✅ data_extraction/ folder
+✅ tradingview_widgets/ folder
+
+## What Stays Local (Protected by .gitignore):
+❌ .env (your API key - SAFE!)
+❌ __pycache__/ folders
+❌ *.pyc files
+
+Total: 19 clean files on GitHub!
+
