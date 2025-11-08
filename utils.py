@@ -495,6 +495,188 @@ def _dedupe_by_url(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 # =====================================================================
+# BUSINESS MODEL DETECTION
+# =====================================================================
+
+def identify_business_model(sector: str = "", industry: str = "") -> Dict[str, Any]:
+    """Identify the business model and return appropriate metrics to focus on."""
+
+    sector = (sector or "").lower()
+    industry = (industry or "").lower()
+
+    # SaaS / Software
+    if any(term in sector or term in industry for term in ["software", "saas", "cloud", "technology"]):
+        return {
+            "business_model": "SaaS/Software",
+            "section_6_metric": "Net Revenue Retention"
+        }
+
+    # Retail / Consumer
+    elif any(term in sector or term in industry for term in ["retail", "consumer", "apparel", "specialty retail"]):
+        return {
+            "business_model": "Retail/Consumer",
+            "section_6_metric": "Same-Store Sales Growth"
+        }
+
+    # Manufacturing / Industrial
+    elif any(term in sector or term in industry for term in ["manufacturing", "industrial", "materials", "chemicals", "aerospace", "defense"]):
+        return {
+            "business_model": "Manufacturing/Industrial",
+            "section_6_metric": "Inventory Turnover"
+        }
+
+    # Financial Services
+    elif any(term in sector or term in industry for term in ["financial", "bank", "insurance", "capital markets"]):
+        return {
+            "business_model": "Financial Services",
+            "section_6_metric": "Net Interest Margin"
+        }
+
+    # Default: Generic
+    else:
+        return {
+            "business_model": "General/Other",
+            "section_6_metric": "Free Cash Flow Conversion"
+        }
+
+
+# =====================================================================
+# DATA GATHERING
+# =====================================================================
+
+def gather_perplexity_data(company_name: str, api_key: str, progress_callback=None) -> Dict[str, Any]:
+    """
+    Gather SEC data from Perplexity for financial research.
+
+    Returns:
+    - sec_data: Financial and context data from SEC
+    - sector/industry: For business model detection
+    - all_sources: Combined citations
+    """
+
+    # CALL 1: Comprehensive SEC Data
+    if progress_callback:
+        progress_callback(1, "Gathering SEC filing data...")
+    print(f"[Call 1/2] Comprehensive SEC data for {company_name}...")
+
+    sec_comprehensive_query = f"""Analyze {company_name}'s latest SEC filings (10-Q, 10-K, 8-K from 2024-2025).
+
+**CRITICAL EXTRACTION REQUIREMENTS:**
+You MUST extract EXACT DOLLAR AMOUNTS and PERCENTAGES from the financial statements.
+Do NOT say "not visible", "not explicitly shown", or "refer to balance sheet" - the numbers ARE in the 10-Q/10-K.
+
+Look in these specific sections:
+- Balance Sheet (Consolidated Balance Sheets): Cash, Total Debt, Current Assets/Liabilities
+- Income Statement (Consolidated Statements of Operations): Revenue, Net Income/Loss, Operating Income
+- Cash Flow Statement: Operating Cash Flow, Free Cash Flow
+
+If you see XBRL tags like "us-gaap_CashAndCashEquivalents", extract the actual dollar value.
+Report as: "Cash: $571.6M" NOT "Cash figures are on the balance sheet"
+
+Provide a comprehensive summary including:
+
+**FINANCIALS (from 10-Q/10-K) - WITH ACTUAL DOLLAR AMOUNTS:**
+- Cash and cash equivalents: $XXX.X million (extract from most recent balance sheet)
+- Total debt (short-term + long-term): $XXX.X million
+- Current assets: $XXX.X million
+- Current liabilities: $XXX.X million
+- Revenue (latest quarter): $XXX.X million
+- Net income/loss (latest quarter): $XXX.X million or $(XXX.X) million
+- EBITDA (last 12 months): Positive/negative and approximate amount
+- Gross margin %: XX.X%
+- Operating margin %: XX.X%
+- Net profit margin %: XX.X%
+- Operating cash flow (latest quarter or TTM): $XXX.X million or $(XXX.X) million
+- Free cash flow and FCF margin %
+- Revenue growth YoY %: Calculate from current vs year-ago quarter
+- Revenue trend: accelerating/stable/decelerating (based on sequential quarters)
+- If burning cash: quarterly burn rate in $M
+- ROIC %: If calculable
+
+**BUSINESS CONTEXT:**
+- Business description (plain English - what do they sell?)
+- Industry sector classification
+- Top 3 material risk factors from Risk Factors section (be specific with details)
+- Any customer concentration (>10% revenue from one customer?)
+
+**RECENT EVENTS (from 8-Ks last 90 days):**
+- Material events, acquisitions, debt issuances, etc.
+- Latest earnings: beat or miss?
+- Latest guidance: raised, maintained, or lowered?
+- Margin trends: expanding, stable, or contracting?
+
+**RED FLAGS:**
+- Going concern warnings
+- Audit issues
+- Liquidity concerns
+- Material weaknesses
+
+Extract ALL numbers from the actual financial statements. Be thorough and specific.
+
+**FINAL REQUIREMENT:**
+At the end of your response, list all SEC filings you referenced under a "SOURCES USED:" section.
+Format each as: Filing Type | Date | Full URL
+
+Example:
+SOURCES USED:
+- 10-Q Q1 2025 | March 31, 2025 | https://www.sec.gov/Archives/edgar/data/1838359/000155837025002499/rgti-20250331x10q.htm
+- 10-K FY2024 | Dec 31, 2024 | https://www.sec.gov/Archives/edgar/data/1838359/000155837025001234/rgti-20241231x10k.htm"""
+
+    sec_response = perplexity_request_with_retry(
+        api_key=api_key,
+        model="sonar-pro",
+        messages=[{"role": "user", "content": sec_comprehensive_query}],
+        search_mode="sec",
+        search_after_date_filter="1/1/2024",
+        web_search_options={"search_context_size": "high"},
+        max_retries=5
+    )
+
+    sec_data = sec_response['choices'][0]['message']['content']
+
+    # Extract citations from API metadata or parse from response text
+    sec_sources = sec_response.get('citations', [])
+
+    if len(sec_sources) == 0:
+        # API didn't return citations - parse URLs from response text
+        import re
+        urls = re.findall(r'https://www\.sec\.gov/[^\s\)\]]+', sec_data)
+        sec_sources = [{'url': url, 'title': 'SEC Filing'} for url in urls]
+        print(f"[OK] Extracted {len(sec_sources)} SEC citations from response text")
+    else:
+        print(f"[OK] Got {len(sec_sources)} citations from API metadata")
+
+    print(f"[OK] SEC data: {len(sec_data)} chars from {len(sec_sources)} filings")
+
+    # Extract sector/industry from SEC data
+    sec_lower = sec_data.lower()
+    sector_match = "Technology"  # Default
+    industry_match = ""
+
+    if "software" in sec_lower or "saas" in sec_lower or "cloud" in sec_lower:
+        sector_match = "Technology"
+        industry_match = "Software"
+    elif "retail" in sec_lower or "consumer" in sec_lower:
+        sector_match = "Consumer"
+        industry_match = "Retail"
+    elif "manufacturing" in sec_lower or "industrial" in sec_lower:
+        sector_match = "Industrials"
+        industry_match = "Manufacturing"
+    elif "bank" in sec_lower or "financial services" in sec_lower:
+        sector_match = "Financial"
+        industry_match = "Banking"
+
+    return {
+        "sec_data": sec_data,
+        "market_data": None,
+        "earnings_quotes": None,
+        "sector": sector_match,
+        "industry": industry_match,
+        "all_sources": sec_sources
+    }
+
+
+# =====================================================================
 # REPORT GENERATION
 # =====================================================================
 
