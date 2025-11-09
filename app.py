@@ -21,6 +21,22 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
+    /* Hide the toolbar at bottom of iframe */
+    .stAppDeployButton {display: none;}
+    .stDecoration {display: none;}
+    
+    /* Additional safeguards */
+    button[title="View fullscreen"] {display: none;}
+    [data-testid="stToolbar"] {display: none;}
+    [data-testid="stDecoration"] {display: none;}
+    [data-testid="stStatusWidget"] {display: none;}
+    
+    /* Hide "Built with Streamlit" footer */
+    footer:after {
+        content: "";
+        display: none;
+    }
+    
     /* Force black background everywhere */
     .stApp {
         background-color: #000000;
@@ -873,26 +889,26 @@ if st.session_state.report_generated:
                 if citation.get('text'):
                     st.caption(f"Referenced: \"{citation['text'][:100]}...\"")
     
-    # Debug section - enabled
-    if 'debug_api_calls' in st.session_state and len(st.session_state.debug_api_calls) > 0:
-        with st.expander("🔍 DEBUG: RAW PERPLEXITY API CALLS", expanded=False):
-            st.markdown(f"**{len(st.session_state.debug_api_calls)} API calls made:**")
-
-            for i, call in enumerate(st.session_state.debug_api_calls, 1):
-                st.markdown(f"### Call {i}: {call['timestamp']}")
-
-                st.markdown("**REQUEST:**")
-                st.json(call['request'])
-
-                st.markdown("**RESPONSE:**")
-                st.code(call['response']['content'], language='text')
-
-                if call['response'].get('citations'):
-                    st.markdown(f"**CITATIONS ({len(call['response']['citations'])}):**")
-                    for j, citation in enumerate(call['response']['citations'], 1):
-                        st.markdown(f"{j}. {citation}")
-
-                st.markdown("---")
+    # Debug section - disabled for production
+    # if 'debug_api_calls' in st.session_state and len(st.session_state.debug_api_calls) > 0:
+    #     with st.expander("🔍 DEBUG: RAW PERPLEXITY API CALLS", expanded=False):
+    #         st.markdown(f"**{len(st.session_state.debug_api_calls)} API calls made:**")
+    #
+    #         for i, call in enumerate(st.session_state.debug_api_calls, 1):
+    #             st.markdown(f"### Call {i}: {call['timestamp']}")
+    #
+    #             st.markdown("**REQUEST:**")
+    #             st.json(call['request'])
+    #
+    #             st.markdown("**RESPONSE:**")
+    #             st.code(call['response']['content'], language='text')
+    #
+    #             if call['response'].get('citations'):
+    #                 st.markdown(f"**CITATIONS ({len(call['response']['citations'])}):**")
+    #                 for j, citation in enumerate(call['response']['citations'], 1):
+    #                     st.markdown(f"{j}. {citation}")
+    #
+    #             st.markdown("---")
     
     st.markdown("---")
     
