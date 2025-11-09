@@ -450,7 +450,7 @@ Think like a trader reading Bloomberg Terminal at 6am:
     try:
         response = perplexity_request_with_retry(
             api_key=api_key,
-            model="sonar-pro",  # Using sonar-pro for high-quality analysis
+            model="sonar-reasoning-pro",  # Using sonar-reasoning-pro for advanced reasoning and report writing
             messages=[{"role": "user", "content": comprehensive_prompt}],
             web_search_options={"search_context_size": "high"},  # Maximum reasoning for comprehensive analysis
             max_retries=3
@@ -645,7 +645,7 @@ SOURCES USED:
 
     sec_response = perplexity_request_with_retry(
         api_key=api_key,
-        model="sonar-pro",
+        model="sonar-deep-research",  # Using sonar-deep-research for comprehensive SEC data gathering
         messages=[{"role": "user", "content": sec_comprehensive_query}],
         search_mode="sec",
         search_after_date_filter="1/1/2024",
@@ -714,15 +714,17 @@ SOURCES USED:
 def generate_financial_report_with_perplexity(company_name: str, progress_callback=None) -> Dict[str, Any]:
     """
     Generate equity research report using PURE Perplexity (no OpenAI).
-    
+
     Implementation:
-    - Passes 1-4: Perplexity searches for data (SEC + market + earnings)
-    - Pass 5: Perplexity generates HTML report from its own search results
-    
+    - Call 1: sonar-deep-research for comprehensive SEC data gathering
+    - Call 2: sonar-reasoning-pro for advanced reasoning and HTML report generation
+
     Benefits vs OpenAI hybrid:
     - 10x cheaper (no GPT-5 costs)
     - Faster (fewer API calls)
     - Simpler (single provider)
+    - Better research with deep-research model
+    - Better reasoning with reasoning-pro model
     """
     
     # STEP 1: Validate API key
@@ -803,7 +805,7 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
             "sources": sources,
             "citations": [],
             "success": True,
-            "model_used": "Pure Perplexity (sonar-pro)",
+            "model_used": "Pure Perplexity (sonar-deep-research + sonar-reasoning-pro)",
             "search_used": True
         }
         
