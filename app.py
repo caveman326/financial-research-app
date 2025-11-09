@@ -16,25 +16,61 @@ st.set_page_config(
 # Minimal Bloomberg-style CSS
 st.markdown("""
 <style>
-    /* Remove all Streamlit default styling */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* NUCLEAR OPTION - Hide everything Streamlit adds */
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    header {visibility: hidden !important;}
     
-    /* Hide the toolbar at bottom of iframe */
-    .stAppDeployButton {display: none;}
-    .stDecoration {display: none;}
+    /* Hide the entire toolbar */
+    [data-testid="stToolbar"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
     
-    /* Additional safeguards */
-    button[title="View fullscreen"] {display: none;}
-    [data-testid="stToolbar"] {display: none;}
-    [data-testid="stDecoration"] {display: none;}
-    [data-testid="stStatusWidget"] {display: none;}
+    /* Hide status widget */
+    [data-testid="stStatusWidget"] {
+        display: none !important;
+    }
     
-    /* Hide "Built with Streamlit" footer */
-    footer:after {
-        content: "";
-        display: none;
+    /* Hide decoration/colored line */
+    [data-testid="stDecoration"] {
+        display: none !important;
+    }
+    
+    /* Hide app header */
+    [data-testid="stHeader"] {
+        display: none !important;
+    }
+    
+    /* Hide sidebar if visible */
+    [data-testid="stSidebar"] {
+        display: none !important;
+    }
+    
+    /* Target the bottom toolbar specifically */
+    .stApp > footer,
+    .stApp > header,
+    div[data-testid="stToolbar"],
+    div[data-testid="stDecoration"],
+    div[data-testid="stStatusWidget"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+    }
+    
+    /* Hide any fullscreen buttons on elements */
+    button[title*="fullscreen"],
+    button[title*="Fullscreen"],
+    button[kind="icon"][title*="View fullscreen"] {
+        display: none !important;
+    }
+    
+    /* Remove all Streamlit branding */
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK {
+        display: none !important;
     }
     
     /* Force black background everywhere */
