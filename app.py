@@ -873,26 +873,26 @@ if st.session_state.report_generated:
                 if citation.get('text'):
                     st.caption(f"Referenced: \"{citation['text'][:100]}...\"")
     
-    # Debug section - disabled
-    # if 'debug_api_calls' in st.session_state and len(st.session_state.debug_api_calls) > 0:
-    #     with st.expander("🔍 DEBUG: RAW PERPLEXITY API CALLS", expanded=False):
-    #         st.markdown(f"**{len(st.session_state.debug_api_calls)} API calls made:**")
-    #
-    #         for i, call in enumerate(st.session_state.debug_api_calls, 1):
-    #             st.markdown(f"### Call {i}: {call['timestamp']}")
-    #
-    #             st.markdown("**REQUEST:**")
-    #             st.json(call['request'])
-    #
-    #             st.markdown("**RESPONSE:**")
-    #             st.code(call['response']['content'], language='text')
-    #
-    #             if call['response'].get('citations'):
-    #                 st.markdown(f"**CITATIONS ({len(call['response']['citations'])}):**")
-    #                 for j, citation in enumerate(call['response']['citations'], 1):
-    #                     st.markdown(f"{j}. {citation}")
-    #
-    #             st.markdown("---")
+    # Debug section - enabled
+    if 'debug_api_calls' in st.session_state and len(st.session_state.debug_api_calls) > 0:
+        with st.expander("🔍 DEBUG: RAW PERPLEXITY API CALLS", expanded=False):
+            st.markdown(f"**{len(st.session_state.debug_api_calls)} API calls made:**")
+
+            for i, call in enumerate(st.session_state.debug_api_calls, 1):
+                st.markdown(f"### Call {i}: {call['timestamp']}")
+
+                st.markdown("**REQUEST:**")
+                st.json(call['request'])
+
+                st.markdown("**RESPONSE:**")
+                st.code(call['response']['content'], language='text')
+
+                if call['response'].get('citations'):
+                    st.markdown(f"**CITATIONS ({len(call['response']['citations'])}):**")
+                    for j, citation in enumerate(call['response']['citations'], 1):
+                        st.markdown(f"{j}. {citation}")
+
+                st.markdown("---")
     
     st.markdown("---")
     
@@ -914,6 +914,7 @@ if st.session_state.report_generated:
         
         # Financial Metrics Widget
         with st.expander("FINANCIAL METRICS", expanded=False):
+            st.caption("⚠️ Note: Widget defaults to NASDAQ. NYSE stocks may show 'no symbol' due to TradingView limitation.")
             try:
                 utils.render_financials_widget(st.session_state.company_ticker)
             except Exception as e:

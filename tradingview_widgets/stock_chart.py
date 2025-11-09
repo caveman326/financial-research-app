@@ -50,9 +50,12 @@ def generate_stock_chart_widget(
         HTML string containing the TradingView Advanced Chart widget
     """
     
-    # Ensure symbol is properly formatted
-    if ":" not in symbol:
-        symbol = f"NASDAQ:{symbol.upper()}"
+    # Remove any existing exchange prefix (e.g., "NYSE:OXY" -> "OXY")
+    # TradingView auto-redirects to correct exchange
+    if ":" in symbol:
+        symbol = symbol.split(":")[1]
+    
+    symbol = symbol.upper()
     
     if comparison_symbols is None:
         comparison_symbols = []

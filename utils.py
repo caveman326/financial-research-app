@@ -95,6 +95,7 @@ def perplexity_request_with_retry(
     - Exponential backoff with jitter
     - Handles rate limits gracefully
     - Circuit breaker pattern for reliability
+    - Supports search_mode parameter for specialized searches (e.g., "sec" for SEC filings)
     - Supports web_search_options for search_context_size (low/medium/high)
     """
     
@@ -314,7 +315,7 @@ def generate_report_with_perplexity(
     
     print("[Call 2/2] Gathering market data, analyzing, and generating report...")
     
-    comprehensive_prompt = f"""You are an expert financial analyst creating a financial health score report.
+    comprehensive_prompt = f"""You are a financial analyst creating a CONCISE financial health score report.
 
 COMPANY: {company_name}
 
@@ -325,88 +326,166 @@ COMPANY: {company_name}
 {sec_data}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 YOUR TASK
+🎯 YOUR TASK - FOLLOW THIS FORMAT EXACTLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**Step 1: Search ONLY for Market & Earnings Data (NOT SEC Filings)**
+**STEP 1: Search for MOST RECENT Market Data (Last 30 Days)**
 
-You already have complete SEC data above. Do NOT search SEC filings again.
+CRITICAL: Use the MOST RECENT data available. Check the current date and prioritize 2025 data over 2024 data.
 
-Now search ONLY financial news sites for:
-1. Current stock price and market cap for {company_name}
-   - Sources: Yahoo Finance, Bloomberg, MarketWatch, Google Finance
-2. Analyst ratings and price targets
-   - Sources: MarketBeat, TipRanks, analyst reports
-3. Recent earnings call quotes from CEO/CFO about outlook
-   - Sources: Seeking Alpha transcripts, earnings call websites
-4. Recent news or developments (last 30 days)
-   - Sources: Reuters, Bloomberg, CNBC
+Search Yahoo Finance, Bloomberg, MarketWatch for:
 
-**CRITICAL SEARCH CONSTRAINTS:**
-- DO search: Yahoo Finance, Bloomberg, MarketWatch, Seeking Alpha, Reuters, CNBC
-- DO NOT search: SEC.gov, SEC filings, 10-Q, 10-K, 8-K (we already have this data)
+**Balance Sheet Data (LATEST QUARTER AVAILABLE):**
+- Cash and cash equivalents (most recent quarter - Q3 2025 or later if available)
+- Total debt (short-term + long-term, latest quarter)
+- Current ratio (latest)
+- Debt-to-equity ratio (latest)
 
-Focus your search on real-time market data and recent analyst commentary.
+**Market Data (CURRENT, NOT HISTORICAL):**
+- Current stock price and 52-week range (today's data)
+- Market cap (current)
+- Analyst price targets and ratings (last 30 days)
+- Recent news or catalysts (last 30 days only)
 
-**Step 2: Analyze Holistically**
+**Use SEC data above for:**
+- Revenue, net income, margins (already extracted)
+- Business description and trends
 
-Calculate financial health score (0-100) based on:
+If SEC data says "See financial sites for balance sheet", search Yahoo Finance for cash/debt figures.
 
-**Financial Strength (0-30 points):**
-- Cash vs debt ratio
-- If burning cash: runway (cash ÷ annual burn)
-- CRITICAL: Burning >$100M/year ≠ "rock solid"
+**STEP 2: Calculate Health Score (0-100)**
 
-**Profitability (0-30 points):**
-- Is EBITDA positive?
-- NET margin (not gross margin!)
-- CRITICAL: Negative net margin = unprofitable = low score
-- FCF positive or negative?
-- Margin trends
+Scoring rubric (MUST total 0-100 before penalties):
 
-**Growth (0-20 points):**
-- Revenue growth vs peers
-- Accelerating or decelerating?
-- Profitable growth > unprofitable growth
+Financial Strength (0-30 points):
+- 25-30: Cash > 2x debt, positive FCF, no burn concerns
+- 15-24: Cash > debt, manageable burn, 2+ year runway
+- 5-14: Cash < debt but serviceable, or high burn with <2yr runway
+- 0-4: Liquidity crisis, going concern risk
 
-**Momentum (0-15 points):**
-- Earnings beats/misses
-- Guidance changes
-- Margin expansion/contraction
+Profitability (0-30 points):
+- 25-30: Net margin >10%, strong FCF, consistent EBITDA
+- 15-24: Net margin 3-10%, positive FCF, positive EBITDA
+- 5-14: Breakeven to small losses, negative FCF but improving
+- 0-4: Large losses, severe cash burn, no path to profitability
 
-**Red Flags (-5 each):**
-- Going concern
-- Cash burn with <2yr runway
-- Shrinking margins + slowing growth
+Growth (0-20 points):
+- 15-20: Revenue growing >15% YoY, accelerating
+- 10-14: Revenue growing 5-15% YoY, stable
+- 5-9: Revenue flat or slightly declining (<5%)
+- 0-4: Revenue declining >10% YoY
 
-**Step 3: Generate 5 Verdicts**
+Momentum (0-15 points):
+- 12-15: Beat earnings, raised guidance, expanding margins
+- 8-11: Met expectations, maintained guidance, stable margins
+- 4-7: Slight miss, lowered guidance, margins compressing
+- 0-3: Major miss, cut guidance, margins collapsing
 
-5 concise bullets using REAL numbers:
-1. Balance sheet (actual cash/debt/burn figures)
-2. Growth (actual revenue growth %)
-3. Profitability (NET margin, not gross!)
-4. Momentum (earnings, guidance)
-5. Risk/opportunity
+Other Factors (0-5 points):
+- Market position, competitive moat, management quality
 
-**Rules:**
-- ✓ = positive (class="positive")
-- ✗ = negative (class="negative")  
-- ⚠ = warning (class="warning")
-- Be honest - unprofitable companies can't claim "strong margins"
-- Cash burners aren't "rock solid"
+Penalties (subtract from total):
+- Going concern warning: -10
+- Material weakness in controls: -5
+- Cash burn with <1yr runway: -10
+- Regulatory crisis: -5 to -15
 
-**Writing Style:**
-Use punchy, valuable copy. Every word should provide value to the reader's time or context.
+SCORING RULES:
+1. Must show your math: "30 + 18 + 12 + 8 + 3 - 5 = 66"
+2. Be harsh on unprofitable companies (<50)
+3. Be generous with profitable growers (>70)
+4. Never give >90 unless truly exceptional
 
-Think like a trader reading Bloomberg Terminal at 6am:
-- Cut the fluff - no "management aims to", "consensus sees", "amid"
-- Use active verbs - "burning", "printing", "bleeding", "stalled", "accelerating"
-- Lead with numbers - "$51B cash vs $21B debt" not "strong liquidity with..."
-- Skip obvious stuff - don't say "no signs of distress" if numbers are good
-- No redundant parentheses summaries
-- Avoid empty words: "meaningful", "substantial", "significant"
+**STEP 3: Write EXACTLY 5 Bullets**
 
-**Step 4: Output HTML**
+Each bullet must:
+- Use icon: ✓ (positive), ✗ (negative), or ⚠ (warning)
+- Include REAL NUMBERS from the data
+- Be ONE SENTENCE, punchy and direct
+- No fluff words like "meaningful", "substantial", "amid"
+
+Required bullets (in order):
+1. Balance sheet → "$XXB cash vs $XXB debt, [status/burn info]"
+2. Growth → "Revenue [grew/shrank] XX% YoY to $XXB in [MOST RECENT QUARTER]—[trend]"
+3. Profitability → "Net margin at XX% and [positive/negative] free cash flow—[status]"
+4. Momentum → "[Beat/Missed] [MOST RECENT QUARTER] earnings; guidance [raised/cut/maintained], [margin trend]"
+5. Risk → "[Key risk or opportunity with specific impact]"
+
+CRITICAL: Use the MOST RECENT QUARTER available in your search results. If current date is in 2025, you should be using Q1/Q2/Q3 2025 data, NOT Q4 2024 annual data.
+
+**WRITING STYLE RULES - SOUND HUMAN, NOT AI:**
+
+✓ DO THIS:
+- Lead with numbers: "$14B cash vs $3B debt, but burning $2B/quarter"
+- Use simple verbs: "shrank", "crashed", "burning", "bleeding", "stalled"
+- Show implications: "two quarters of burn would halve liquidity"
+- Be direct: "unprofitable" not "suboptimal profitability dynamics"
+- Active voice: "Revenue fell 15%" not "A decline in revenue was observed"
+
+✗ NEVER DO THIS:
+- Jargon: "amid headwinds", "robust dynamics", "meaningful trajectory"
+- Obscure metrics: "Altman Z-score", "DSO", "working capital efficiency", "ROIC"
+- Hedging: "appears to suggest", "potentially indicates", "may exhibit"
+- Consultant-speak: "optimization", "leverage expansion", "operational dynamics"
+- Percentage jargon: "basis points" (just say "from 5.2% to 7.8%")
+- Empty words: "robust", "significant", "meaningful", "substantial", "considerable"
+- Academic terms: "liquidity dynamics", "margin trajectory", "revenue optimization"
+
+✗ NEVER USE FINANCIAL ACRONYMS - ALWAYS TRANSLATE TO PLAIN LANGUAGE:
+- "ROTCE" → say "return on equity" or "returns to shareholders"
+- "NII" → say "interest income" or "lending profit"
+- "EBITDA" → say "operating profit"
+- "FCF" → spell out "free cash flow" (never use acronym alone)
+- "ARPU" → say "revenue per customer"
+- "CET1" → say "core capital"
+- "NIM" → say "lending margin"
+- "NCO" → say "credit losses"
+- "YTD" → spell out "year-to-date" (never use acronym alone)
+- "LTV/CAC" → say "customer value vs acquisition cost"
+- "RWA" → say "risk-weighted assets"
+
+Exception: Q1/Q2/Q3/Q4 and YoY are acceptable (universally known).
+
+GOOD EXAMPLES:
+✓ "$18B cash vs $7B debt, generating $6B operating cash flow—balance sheet rock solid"
+✓ "Revenue shrank 11% YoY to $22B in Q2—automotive down 15%, growth stalled"
+✓ "Net margin at 5.3% and positive free cash flow—profitable but margins compressed from 8.1% to 5.3%"
+
+BAD EXAMPLES (AI-SOUNDING):
+✗ "The firm exhibits robust liquidity dynamics with an Altman Z-score of 3.2"
+✗ "Operational leverage optimization has driven margin expansion amid headwinds"
+✗ "Revenue trajectory appears to suggest decelerating momentum dynamics"
+
+GOOD EXAMPLES - BANK SPECIFIC:
+✓ "Return on equity 15.4%—generating strong returns for shareholders"
+✓ "Interest income up 6% YoY to $14.2B—core lending business growing steadily"
+✓ "Core capital ratio 12.1% vs regulatory minimum 10.5%—balance sheet rock solid"
+
+BAD EXAMPLES - BANK JARGON (AI-SOUNDING):
+✗ "ROTCE expanded 140 basis points to 15.4% amid NIM compression dynamics"
+✗ "CET1 ratio robust at 12.1% despite RWA optimization headwinds"
+✗ "NII trajectory reflects deposit beta sensitivity to rate normalization"
+
+**STEP 4: FINAL QUALITY REVIEW (Do this BEFORE outputting HTML)**
+
+Before you output the HTML, verify:
+
+DATE CHECK:
+- What is today's date? (You have access to current date)
+- What quarter did I use in my bullets? (Q1/Q2/Q3/Q4 and year)
+- Is this the MOST RECENT quarter available?
+- If today is in 2025 and I used Q4 2024 data, STOP and search for Q1/Q2/Q3 2025 data instead
+
+QUALITY CHECK:
+- Do all 5 bullets use REAL NUMBERS from the data?
+- Are quarters/years consistent across all bullets?
+- Did I avoid acronyms (ROTCE, NII, YTD, FCF without spelling out)?
+- Is each bullet ONE sentence?
+- Did I use plain language, not jargon?
+
+If ANY check fails, FIX IT before outputting HTML.
+
+**STEP 5: Output HTML (Only After Review)**
 
 <div class="health-report">
 <div class="company-header">
@@ -417,34 +496,58 @@ Think like a trader reading Bloomberg Terminal at 6am:
 <div class="score-value">
 <span class="score-number">XX</span>
 <span class="score-max">/100</span>
-<span class="score-indicator">🟢/🟡/🟠/🔴</span>
+<span class="score-indicator">🟢</span>
 </div>
+<!-- Score calculation: Financial(XX) + Profitability(XX) + Growth(XX) + Momentum(XX) + Other(X) - Penalties(X) = XX -->
 </div>
 <div class="key-points">
 <div class="points-header">5 Key Insights from Latest SEC Filings:</div>
 <div class="point-item positive">
 <span class="point-icon">✓</span>
-<div class="point-text">First verdict</div>
+<div class="point-text">$XXB cash vs $XXB debt...</div>
 </div>
-... (4 more verdicts)
+<div class="point-item negative">
+<span class="point-icon">✗</span>
+<div class="point-text">Revenue shrank XX% YoY...</div>
+</div>
+<div class="point-item warning">
+<span class="point-icon">⚠</span>
+<div class="point-text">Net margin at XX%...</div>
+</div>
+<div class="point-item positive">
+<span class="point-icon">✓</span>
+<div class="point-text">Beat QX earnings...</div>
+</div>
+<div class="point-item warning">
+<span class="point-icon">⚠</span>
+<div class="point-text">Risk assessment...</div>
+</div>
 </div>
 </div>
 
-**Score Guide:**
+Score indicator emojis:
 - 80-100: 🟢 (green)
-- 60-79: 🟡 (yellow)
+- 60-79: 🟡 (yellow)  
 - 40-59: 🟠 (orange)
 - 0-39: 🔴 (red)
 
+Point classes:
+- Use class="positive" for ✓ bullets
+- Use class="negative" for ✗ bullets
+- Use class="warning" for ⚠ bullets
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔴 CRITICAL 🔴
+🔴 CRITICAL REQUIREMENTS 🔴
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. Pure HTML only (no markdown, code blocks, backticks)
-2. Use REAL numbers from SEC data above
-3. Realistic scores (unprofitable burners = 30-50, not 100)
-4. Start with <div class="health-report"> (no wrapper)
-5. Use NET margin for profitability, NOT gross margin
+1. Output ONLY the HTML structure shown above - no extra sections
+2. EXACTLY 5 bullet points - no more, no less
+3. Each bullet = ONE sentence with real numbers
+4. No tables, no additional commentary, no explanatory paragraphs
+5. Pure HTML only (no markdown, no code blocks, no backticks)
+6. Start with <div class="health-report"> and end with </div>
+7. Use NET margin for profitability, NOT gross margin
+8. Be brutally honest - unprofitable burners get low scores (30-50)
 """
 
     try:
@@ -495,73 +598,6 @@ def _dedupe_by_url(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 # =====================================================================
-# BUSINESS MODEL DETECTION
-# =====================================================================
-
-def identify_business_model(sector: str = "", industry: str = "") -> Dict[str, Any]:
-    """Identify the business model and return appropriate metrics to focus on."""
-
-    sector = (sector or "").lower()
-    industry = (industry or "").lower()
-
-    # SaaS / Software
-    if any(term in sector or term in industry for term in ["software", "saas", "cloud", "technology"]):
-        return {
-            "business_model": "SaaS/Software",
-            "section_6_metric": "Net Revenue Retention"
-        }
-
-    # Retail / Consumer
-    elif any(term in sector or term in industry for term in ["retail", "consumer", "apparel", "specialty retail"]):
-        return {
-            "business_model": "Retail/Consumer",
-            "section_6_metric": "Same-Store Sales Growth"
-        }
-
-    # Manufacturing / Industrial
-    elif any(term in sector or term in industry for term in ["manufacturing", "industrial", "materials", "chemicals", "aerospace", "defense"]):
-        return {
-            "business_model": "Manufacturing/Industrial",
-            "section_6_metric": "Inventory Turnover"
-        }
-
-    # Financial Services
-    elif any(term in sector or term in industry for term in ["financial", "bank", "insurance", "capital markets"]):
-        return {
-            "business_model": "Financial Services",
-            "section_6_metric": "Net Interest Margin"
-        }
-
-    # Energy / Oil & Gas
-    elif any(term in sector or term in industry for term in ["energy", "oil", "gas", "mining", "petroleum"]):
-        return {
-            "business_model": "Energy/Oil & Gas",
-            "section_6_metric": "Production Volume Growth"
-        }
-
-    # Healthcare / Pharma
-    elif any(term in sector or term in industry for term in ["healthcare", "pharmaceutical", "biotech", "medical"]):
-        return {
-            "business_model": "Healthcare/Pharma",
-            "section_6_metric": "R&D Efficiency"
-        }
-
-    # Telecommunications
-    elif any(term in sector or term in industry for term in ["telecom", "communication"]):
-        return {
-            "business_model": "Telecommunications",
-            "section_6_metric": "ARPU Growth"
-        }
-
-    # Default: Generic
-    else:
-        return {
-            "business_model": "General/Other",
-            "section_6_metric": "Free Cash Flow Conversion"
-        }
-
-
-# =====================================================================
 # DATA GATHERING
 # =====================================================================
 
@@ -580,87 +616,80 @@ def gather_perplexity_data(company_name: str, api_key: str, progress_callback=No
         progress_callback(1, "Gathering SEC filing data...")
     print(f"[Call 1/2] Comprehensive SEC data for {company_name}...")
 
-    sec_comprehensive_query = f"""Analyze {company_name}'s latest SEC filings (10-Q, 10-K, 8-K from 2024-2025).
+    sec_comprehensive_query = f"""Find {company_name}'s OWN 10-Q or 10-K filing where {company_name} is the FILER (not third-party mentions).
 
-**CRITICAL EXTRACTION REQUIREMENTS:**
-You MUST extract EXACT DOLLAR AMOUNTS and PERCENTAGES from the financial statements.
-Do NOT say "not visible", "not explicitly shown", or "refer to balance sheet" - the numbers ARE in the 10-Q/10-K.
+Search for SEC filings filed BY {company_name}, not filings that just mention {company_name}.
 
-Look in these specific sections:
-- Balance Sheet (Consolidated Balance Sheets): Cash, Total Debt, Current Assets/Liabilities
-- Income Statement (Consolidated Statements of Operations): Revenue, Net Income/Loss, Operating Income
-- Cash Flow Statement: Operating Cash Flow, Free Cash Flow
+**FROM THE FILING TEXT, FIND AND REPORT:**
 
-If you see XBRL tags like "us-gaap_CashAndCashEquivalents", extract the actual dollar value.
-Report as: "Cash: $571.6M" NOT "Cash figures are on the balance sheet"
+**1. REVENUE (Income Statement - REQUIRED):**
+- Total revenue for most recent quarter: $X.XB
+- Total revenue for year-ago quarter: $X.XB
+- Calculate YoY growth: X.X%
+- Format: "Revenue Q[X] 20XX: $X.XB vs Q[X] 20XX: $X.XB (+/-X.X% YoY)"
 
-Provide a comprehensive summary including:
+**2. PROFITABILITY (Income Statement - REQUIRED):**
+- Net income for most recent quarter: $X.XB
+- Operating income: $X.XB (if mentioned)
+- Calculate net margin: (Net income / Revenue) × 100
+- Format: "Net income Q[X] 20XX: $X.XB (X.X% margin)"
 
-**FINANCIALS (from 10-Q/10-K) - WITH ACTUAL DOLLAR AMOUNTS:**
-- Cash and cash equivalents: $XXX.X million (extract from most recent balance sheet)
-- Total debt (short-term + long-term): $XXX.X million
-- Current assets: $XXX.X million
-- Current liabilities: $XXX.X million
-- Revenue (latest quarter): $XXX.X million
-- Net income/loss (latest quarter): $XXX.X million or $(XXX.X) million
-- EBITDA (last 12 months): Positive/negative and approximate amount
-- Gross margin %: XX.X%
-- Operating margin %: XX.X%
-- Net profit margin %: XX.X%
-- Operating cash flow (latest quarter or TTM): $XXX.X million or $(XXX.X) million
-- Free cash flow and FCF margin %
-- Revenue growth YoY %: Calculate from current vs year-ago quarter
-- Revenue trend: accelerating/stable/decelerating (based on sequential quarters)
-- If burning cash: quarterly burn rate in $M
-- ROIC %: If calculable
+**3. CASH FLOW (if mentioned in filing summary):**
+- Operating cash flow: $X.XB
+- Free cash flow: $X.XB (if stated)
+- Capital expenditures: $X.XB (if stated)
 
-**BUSINESS CONTEXT:**
-- Business description (plain English - what do they sell?)
-- Industry sector classification
-- Top 3 material risk factors from Risk Factors section (be specific with details)
-- Any customer concentration (>10% revenue from one customer?)
+**4. BUSINESS CONTEXT:**
+- What does the company do? (1 sentence)
+- Industry sector
+- Key trends: Is revenue accelerating or decelerating quarter-over-quarter?
+- Are margins expanding or contracting?
+- Major risks mentioned in Risk Factors section (top 2-3)
+- Recent guidance changes: raised, lowered, or maintained?
 
-**RECENT EVENTS (from 8-Ks last 90 days):**
-- Material events, acquisitions, debt issuances, etc.
-- Latest earnings: beat or miss?
-- Latest guidance: raised, maintained, or lowered?
-- Margin trends: expanding, stable, or contracting?
+**5. EARNINGS PERFORMANCE:**
+- Did they beat or miss analyst expectations? (if mentioned)
+- Any going concern warnings or liquidity issues flagged?
 
-**RED FLAGS:**
-- Going concern warnings
-- Audit issues
-- Liquidity concerns
-- Material weaknesses
+**6. BALANCE SHEET NOTE:**
+If cash/debt figures aren't clearly visible in the search results, write:
+"Balance sheet: Not extracted from SEC search - see Call 2 for cash/debt data"
 
-Extract ALL numbers from the actual financial statements. Be thorough and specific.
+**CRITICAL REQUIREMENTS:**
+1. Revenue and net income are MANDATORY - extract from income statement
+2. Calculate YoY percentages accurately: ((Current - Prior) / Prior) × 100
+3. Use actual dollar amounts from filing, not estimates
+4. If a metric truly isn't findable, say "Not mentioned in filing"
 
-**FINAL REQUIREMENT:**
-At the end of your response, list all SEC filings you referenced under a "SOURCES USED:" section.
-Format each as: Filing Type | Date | Full URL
+**FORMAT EXAMPLE:**
+Revenue Q2 2025: $22.5B vs Q2 2024: $25.5B (-11.8% YoY)
+Net income Q2 2025: $1.2B (5.3% margin)
+Operating cash flow: $4.7B
+Balance sheet: Not extracted - see Call 2
 
-Example:
-SOURCES USED:
-- 10-Q Q1 2025 | March 31, 2025 | https://www.sec.gov/Archives/edgar/data/1838359/000155837025002499/rgti-20250331x10q.htm
-- 10-K FY2024 | Dec 31, 2024 | https://www.sec.gov/Archives/edgar/data/1838359/000155837025001234/rgti-20241231x10k.htm"""
+**SOURCES USED:**
+- List all SEC filing URLs referenced"""
 
     sec_response = perplexity_request_with_retry(
         api_key=api_key,
-        model="sonar-deep-research",  # Using sonar-deep-research for comprehensive SEC data gathering
+        model="sonar-reasoning-pro",  # Using sonar-reasoning-pro for SEC data extraction with reasoning
         messages=[{"role": "user", "content": sec_comprehensive_query}],
         search_mode="sec",
         search_after_date_filter="1/1/2024",
-        web_search_options={"search_context_size": "high"},
         max_retries=5
     )
 
     sec_data = sec_response['choices'][0]['message']['content']
+    
+    # Strip <think> tags if present (sonar-reasoning-pro sometimes exposes internal reasoning)
+    import re
+    sec_data = re.sub(r'<think>.*?</think>', '', sec_data, flags=re.DOTALL).strip()
 
     # Extract citations from API metadata or parse from response text
     sec_sources = sec_response.get('citations', [])
 
     if len(sec_sources) == 0:
         # API didn't return citations - parse URLs from response text
-        import re
         urls = re.findall(r'https://www\.sec\.gov/[^\s\)\]]+', sec_data)
         sec_sources = [{'url': url, 'title': 'SEC Filing'} for url in urls]
         print(f"[OK] Extracted {len(sec_sources)} SEC citations from response text")
@@ -669,9 +698,9 @@ SOURCES USED:
 
     print(f"[OK] SEC data: {len(sec_data)} chars from {len(sec_sources)} filings")
 
-    # Extract sector/industry from SEC data
+    # Extract sector/industry from SEC data (for informational purposes)
     sec_lower = sec_data.lower()
-    sector_match = ""  # Empty default, let identify_business_model decide
+    sector_match = ""
     industry_match = ""
 
     if "software" in sec_lower or "saas" in sec_lower or "cloud" in sec_lower:
@@ -716,15 +745,14 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
     Generate equity research report using PURE Perplexity (no OpenAI).
 
     Implementation:
-    - Call 1: sonar-deep-research for comprehensive SEC data gathering
-    - Call 2: sonar-reasoning-pro for advanced reasoning and HTML report generation
+    - Call 1: sonar-reasoning-pro with SEC search mode for data extraction with reasoning
+    - Call 2: sonar-reasoning-pro with high context for analysis and HTML report generation
 
     Benefits vs OpenAI hybrid:
     - 10x cheaper (no GPT-5 costs)
     - Faster (fewer API calls)
     - Simpler (single provider)
-    - Better research with deep-research model
-    - Better reasoning with reasoning-pro model
+    - Consistent reasoning model across both calls
     """
     
     # STEP 1: Validate API key
@@ -762,15 +790,7 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
         search_time = time.time() - start_time
         print(f"[OK] Data gathering complete: {search_time:.1f}s")
         
-        # STEP 3: Identify business model
-        business_model_info = identify_business_model(
-            sector=perplexity_data['sector'],
-            industry=perplexity_data['industry']
-        )
-        print(f"[i] Business model: {business_model_info['business_model']}")
-        print(f"[i] Section 6 metric: {business_model_info['section_6_metric']}")
-        
-        # STEP 4: Generate HTML report using Perplexity
+        # STEP 3: Generate HTML report using Perplexity
         if progress_callback:
             progress_callback(2, "Analyzing and generating report...")
         
@@ -805,7 +825,7 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
             "sources": sources,
             "citations": [],
             "success": True,
-            "model_used": "Pure Perplexity (sonar-deep-research + sonar-reasoning-pro)",
+            "model_used": "Pure Perplexity (sonar-reasoning-pro x2)",
             "search_used": True
         }
         

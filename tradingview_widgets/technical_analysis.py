@@ -36,10 +36,12 @@ def generate_technical_analysis_widget(
         HTML string containing the TradingView Technical Analysis widget
     """
     
-    # Ensure symbol is properly formatted
-    if ":" not in symbol:
-        # Default to NASDAQ for simple symbols like AAPL
-        symbol = f"NASDAQ:{symbol.upper()}"
+    # Remove any existing exchange prefix (e.g., "NYSE:OXY" -> "OXY")
+    # TradingView auto-redirects to correct exchange
+    if ":" in symbol:
+        symbol = symbol.split(":")[1]
+    
+    symbol = symbol.upper()
     
     widget_config = {
         "colorTheme": color_theme,

@@ -62,10 +62,9 @@ def format_symbol_for_tradingview(symbol: str, exchange: Optional[str] = None) -
     if exchange:
         return f"{exchange.upper()}:{symbol}"
     
-    # Default to NASDAQ for common US stocks
-    # This is a simple heuristic - in production, you might want
-    # to use a symbol lookup service
-    return f"NASDAQ:{symbol}"
+    # Return raw symbol - TradingView auto-redirects to correct exchange
+    # (e.g., "OXY" redirects to "NYSE-OXY", "AAPL" redirects to "NASDAQ-AAPL")
+    return symbol.upper()
 
 
 def extract_symbol_data(symbol: str) -> Dict[str, Any]:

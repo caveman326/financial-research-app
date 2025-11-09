@@ -34,9 +34,12 @@ def generate_stock_financials_widget(
         HTML string containing the TradingView Stock Financials widget
     """
     
-    # Ensure symbol is properly formatted
-    if ":" not in symbol:
-        symbol = f"NASDAQ:{symbol.upper()}"
+    # Remove any existing exchange prefix (e.g., "NYSE:OXY" -> "OXY")
+    # TradingView auto-redirects to correct exchange (e.g., OXY -> NYSE-OXY)
+    if ":" in symbol:
+        symbol = symbol.split(":")[1]
+    
+    symbol = symbol.upper()
     
     widget_config = {
         "isTransparent": is_transparent,
@@ -45,7 +48,7 @@ def generate_stock_financials_widget(
         "width": width,
         "height": height,
         "colorTheme": color_theme,
-        "symbol": symbol,
+        "symbol": symbol,  # Just raw ticker, TradingView handles exchange routing
         "locale": "en"
     }
     
