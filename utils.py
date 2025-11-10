@@ -31,6 +31,28 @@ if sys.platform == 'win32':
 load_dotenv(override=False)
 
 
+def get_random_api_key():
+    """Randomly select an API key from available keys"""
+    keys = []
+    
+    # Collect all PERPLEXITY_API_KEY_* variables
+    for i in range(1, 11):  # Check up to 10 keys
+        key = os.getenv(f"PERPLEXITY_API_KEY_{i}")
+        if key:
+            keys.append(key)
+    
+    # Fallback to single key if no numbered keys found
+    if not keys:
+        fallback = os.getenv("PERPLEXITY_API_KEY")
+        if fallback:
+            return fallback
+        return ""
+    
+    selected_key = random.choice(keys)
+    print(f"[INFO] Using API key #{keys.index(selected_key) + 1} of {len(keys)} available keys")
+    return selected_key
+
+
 # =====================================================================
 # PERPLEXITY HELPER - Circuit Breaker & Retry Logic
 # =====================================================================
@@ -760,7 +782,7 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
     print(f"GENERATING REPORT FOR {company_name}")
     print(f"{'='*60}\n")
     
-    perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
+    perplexity_api_key = get_random_api_key()
     if not perplexity_api_key:
         return {
             "report": "Error: PERPLEXITY_API_KEY not found in environment variables",
