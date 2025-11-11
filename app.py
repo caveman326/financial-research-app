@@ -802,6 +802,11 @@ with col1:
 if generate_button:
     if company_name:
         try:
+            # Clean up ticker input - add $ to avoid word interpretation issues
+            ticker = company_name.strip().upper()
+            if not ticker.startswith('$'):
+                ticker = f"${ticker}"
+            
             # Clear previous debug data
             st.session_state.debug_api_calls = []
             
@@ -846,7 +851,7 @@ if generate_button:
             
             # Use Pure Perplexity for search + report generation (with progress updates)
             result = utils.generate_financial_report_with_perplexity(
-                company_name,
+                ticker,  # Use sanitized ticker with $
                 progress_callback=update_progress
             )
             gen_time = time.time() - start_time
@@ -868,7 +873,7 @@ if generate_button:
             if result["success"] and result["report"]:
                 st.session_state.report_generated = True
                 st.session_state.report_content = result["report"]
-                st.session_state.company_ticker = company_name
+                st.session_state.company_ticker = ticker.lstrip('$')  # Store without $ for widgets
                 st.session_state.sources = result.get("sources", [])
                 st.session_state.citations = result.get("citations", [])
                 
