@@ -334,6 +334,7 @@ def generate_report_with_perplexity(
     3. Analyzes everything holistically
     4. Generates HTML report
     """
+    import re
     
     print("[Call 2/2] Gathering market data, analyzing, and generating report...")
     
@@ -592,6 +593,9 @@ YOU MUST OUTPUT THE HTML STRUCTURE ABOVE NO MATTER WHAT!
         
         html_report = response['choices'][0]['message']['content']
         call2_sources = response.get('citations', [])
+        
+        # Strip <think> tags from Call 2 response before validation
+        html_report = re.sub(r'<think>.*?</think>', '', html_report, flags=re.DOTALL).strip()
         
         # Check if response is actually HTML
         if not html_report.strip().startswith('<div class="health-report">'):
