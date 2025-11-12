@@ -562,14 +562,23 @@ Point classes:
 🔴 CRITICAL REQUIREMENTS 🔴
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+⚠️ MANDATORY HTML OUTPUT ⚠️
+YOU MUST OUTPUT THE HTML STRUCTURE ABOVE NO MATTER WHAT!
+- NEVER output plain text explanations
+- NEVER say "I cannot complete this" or "Missing critical data"
+- NEVER explain why you can't do something
+- If data is missing, use "N/A" or estimates with "~" prefix
+- If you only have partial data, use what you have and estimate the rest
+
 1. Output ONLY the HTML structure shown above - no extra sections
 2. EXACTLY 5 bullet points - no more, no less
-3. Each bullet = ONE sentence with real numbers
+3. Each bullet = ONE sentence with real numbers (or "~$X" for estimates)
 4. No tables, no additional commentary, no explanatory paragraphs
 5. Pure HTML only (no markdown, no code blocks, no backticks)
 6. Start with <div class="health-report"> and end with </div>
 7. Use NET margin for profitability, NOT gross margin
 8. Be brutally honest - unprofitable burners get low scores (30-50)
+9. EVEN WITH MISSING DATA, OUTPUT THE HTML FORMAT!
 """
 
     try:
@@ -583,6 +592,47 @@ Point classes:
         
         html_report = response['choices'][0]['message']['content']
         call2_sources = response.get('citations', [])
+        
+        # Check if response is actually HTML
+        if not html_report.strip().startswith('<div class="health-report">'):
+            print(f"[ERROR] Response is not HTML format. Got: {html_report[:200]}...")
+            # Create a fallback HTML report with limited data
+            html_report = f"""<div class="health-report">
+<div class="company-header">
+<div class="company-name">{company_name.upper()}</div>
+</div>
+<div class="health-score-display">
+<div class="score-label">FINANCIAL HEALTH SCORE</div>
+<div class="score-value">
+<span class="score-number">N/A</span>
+<span class="score-max">/100</span>
+<span class="score-indicator">⚠️</span>
+</div>
+</div>
+<div class="key-points">
+<div class="points-header">5 Key Insights from Latest SEC Filings:</div>
+<div class="point-item warning">
+<span class="point-icon">⚠</span>
+<div class="point-text">Insufficient financial data available to calculate metrics.</div>
+</div>
+<div class="point-item warning">
+<span class="point-icon">⚠</span>
+<div class="point-text">SEC filing data extraction incomplete for {company_name}.</div>
+</div>
+<div class="point-item warning">
+<span class="point-icon">⚠</span>
+<div class="point-text">Unable to determine cash position and debt levels.</div>
+</div>
+<div class="point-item warning">
+<span class="point-icon">⚠</span>
+<div class="point-text">Revenue and profitability metrics not available.</div>
+</div>
+<div class="point-item warning">
+<span class="point-icon">⚠</span>
+<div class="point-text">Please verify company ticker and try again.</div>
+</div>
+</div>
+</div>"""
         
         html_report = sanitize_and_validate_html(html_report)
         
@@ -708,6 +758,28 @@ Balance sheet: Not extracted - see Call 2
     # Strip <think> tags if present (sonar-reasoning-pro sometimes exposes internal reasoning)
     import re
     sec_data = re.sub(r'<think>.*?</think>', '', sec_data, flags=re.DOTALL).strip()
+    
+    # Check if Call 1 returned insufficient data
+    if len(sec_data) < 500 or "cannot" in sec_data.lower() or "not available" in sec_data.lower() or "missing critical data" in sec_data.lower():
+        print(f"[WARNING] Call 1 may have insufficient data (only {len(sec_data)} chars). Response preview: {sec_data[:200]}...")
+        # Retry once with a more specific prompt for companies with limited data
+        if "cannot" in sec_data.lower() or len(sec_data) < 300:
+            print("[RETRY] Attempting Call 1 again with broader search...")
+            sec_comprehensive_query_retry = sec_comprehensive_query + "\n\nIMPORTANT: Search more broadly. Try variations of the company name. Look for ANY recent financial data about this company from SEC filings, earnings reports, or financial statements. Include investor presentations if needed."
+            sec_response_retry = perplexity_request_with_retry(
+                api_key=api_key,
+                model="sonar-reasoning-pro",
+                messages=[{"role": "user", "content": sec_comprehensive_query_retry}],
+                web_search_options={"search_context_size": "high"},
+                max_retries=2
+            )
+            if sec_response_retry and 'choices' in sec_response_retry:
+                sec_data_retry = sec_response_retry['choices'][0]['message']['content']
+                sec_data_retry = re.sub(r'<think>.*?</think>', '', sec_data_retry, flags=re.DOTALL).strip()
+                if len(sec_data_retry) > len(sec_data):
+                    print(f"[OK] Retry successful: {len(sec_data_retry)} chars")
+                    sec_data = sec_data_retry
+                    sec_response = sec_response_retry
 
     # Extract citations from API metadata or parse from response text
     sec_sources = sec_response.get('citations', [])
