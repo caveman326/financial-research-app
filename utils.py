@@ -594,50 +594,15 @@ YOU MUST OUTPUT THE HTML STRUCTURE ABOVE NO MATTER WHAT!
         html_report = response['choices'][0]['message']['content']
         call2_sources = response.get('citations', [])
         
-        # Strip <think> tags from Call 2 response before validation
+        # Strip <think> tags from Call 2 response
         html_report = re.sub(r'<think>.*?</think>', '', html_report, flags=re.DOTALL).strip()
         
-        # Check if response is actually HTML
-        if not html_report.strip().startswith('<div class="health-report">'):
-            print(f"[ERROR] Response is not HTML format. Got: {html_report[:200]}...")
-            # Create a fallback HTML report with limited data
-            html_report = f"""<div class="health-report">
-<div class="company-header">
-<div class="company-name">{company_name.upper()}</div>
-</div>
-<div class="health-score-display">
-<div class="score-label">FINANCIAL HEALTH SCORE</div>
-<div class="score-value">
-<span class="score-number">N/A</span>
-<span class="score-max">/100</span>
-<span class="score-indicator">⚠️</span>
-</div>
-</div>
-<div class="key-points">
-<div class="points-header">5 Key Insights from Latest SEC Filings:</div>
-<div class="point-item warning">
-<span class="point-icon">⚠</span>
-<div class="point-text">Insufficient financial data available to calculate metrics.</div>
-</div>
-<div class="point-item warning">
-<span class="point-icon">⚠</span>
-<div class="point-text">SEC filing data extraction incomplete for {company_name}.</div>
-</div>
-<div class="point-item warning">
-<span class="point-icon">⚠</span>
-<div class="point-text">Unable to determine cash position and debt levels.</div>
-</div>
-<div class="point-item warning">
-<span class="point-icon">⚠</span>
-<div class="point-text">Revenue and profitability metrics not available.</div>
-</div>
-<div class="point-item warning">
-<span class="point-icon">⚠</span>
-<div class="point-text">Please verify company ticker and try again.</div>
-</div>
-</div>
-</div>"""
+        # Strip markdown code blocks if present
+        if html_report.startswith('```'):
+            html_report = re.sub(r'^```\w*\n', '', html_report)
+            html_report = re.sub(r'\n```$', '', html_report).strip()
         
+        # Sanitize and validate HTML
         html_report = sanitize_and_validate_html(html_report)
         
         print(f"[OK] Report generated: {len(html_report)} chars, {len(call2_sources)} market sources")
