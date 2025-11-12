@@ -638,7 +638,10 @@ def gather_perplexity_data(company_name: str, api_key: str, progress_callback=No
         progress_callback(1, "Gathering SEC filing data...")
     print(f"[Call 1/2] Comprehensive SEC data for {company_name}...")
 
-    sec_comprehensive_query = f"""Find {company_name}'s OWN 10-Q or 10-K filing where {company_name} is the FILER (not third-party mentions).
+    sec_comprehensive_query = f"""Find {company_name}'s OWN recent SEC filing where {company_name} is the FILER (not third-party mentions).
+
+For US companies: Search for 10-Q (quarterly) or 10-K (annual) filings.
+For foreign companies (ADRs): Search for 20-F (annual) or 6-K (current report) filings.
 
 Search for SEC filings filed BY {company_name}, not filings that just mention {company_name}.
 
@@ -696,8 +699,7 @@ Balance sheet: Not extracted - see Call 2
         api_key=api_key,
         model="sonar-reasoning-pro",  # Using sonar-reasoning-pro for SEC data extraction with reasoning
         messages=[{"role": "user", "content": sec_comprehensive_query}],
-        search_mode="sec",
-        search_after_date_filter="1/1/2024",
+        web_search_options={"search_context_size": "high"},  # High context for comprehensive SEC data extraction
         max_retries=5
     )
 
