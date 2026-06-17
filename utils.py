@@ -31,6 +31,20 @@ if sys.platform == 'win32':
 load_dotenv(override=False)
 
 
+# =====================================================================
+# MODEL CONFIGURATION
+# =====================================================================
+# Call 1 is a retrieval/extraction task (SEC data) -> sonar-pro is faster,
+# returns more citations, and avoids the reasoning-pro 500 hotspot.
+# Call 2 is a scoring/analysis task -> sonar-reasoning-pro for chain-of-thought,
+# with sonar-pro as a fallback if the reasoning model has a server-side outage.
+DATA_MODEL = "sonar-pro"
+REPORT_MODEL = "sonar-reasoning-pro"
+REPORT_FALLBACK_MODEL = "sonar-pro"
+SEARCH_CONTEXT_SIZE = "medium"  # lowered from "high" to cut latency + per-request cost
+REPORT_REASONING_EFFORT = "medium"  # balances scoring quality vs latency
+
+
 def get_random_api_key():
     """Randomly select an API key from available keys"""
     keys = []
@@ -106,6 +120,7 @@ def perplexity_request_with_retry(
     return_images: bool = False,
     return_related_questions: bool = False,
     web_search_options: Optional[Dict[str, str]] = None,
+    reasoning_effort: Optional[str] = None,
     max_retries: int = 5,
     timeout: int = 120
 ) -> Dict[str, Any]:
@@ -115,10 +130,11 @@ def perplexity_request_with_retry(
     Implements best practices from Perplexity documentation:
     - Uses requests.post() directly for Perplexity-specific parameters
     - Exponential backoff with jitter
-    - Handles rate limits gracefully
+    - Handles rate limits (429) AND transient server errors (5xx) gracefully
     - Circuit breaker pattern for reliability
     - Supports search_mode parameter for specialized searches (e.g., "sec" for SEC filings)
     - Supports web_search_options for search_context_size (low/medium/high)
+    - Supports reasoning_effort (minimal/low/medium/high) to balance quality vs latency
     """
     
     url = "https://api.perplexity.ai/chat/completions"
@@ -146,6 +162,8 @@ def perplexity_request_with_retry(
                 payload["return_related_questions"] = return_related_questions
             if web_search_options:
                 payload["web_search_options"] = web_search_options
+            if reasoning_effort:
+                payload["reasoning_effort"] = reasoning_effort
             
             # Make API call using requests
             response = requests.post(
@@ -189,7 +207,18 @@ def perplexity_request_with_retry(
                     continue
                 else:
                     raise Exception(f"Rate limit exceeded after {max_retries} retries")
+            elif response.status_code in (500, 502, 503, 504):  # Transient server errors
+                request_id = response.headers.get("X-Request-ID", "n/a")
+                if attempt < max_retries - 1:
+                    delay = (2 ** attempt) + random.uniform(0, 1)
+                    print(f"[WARNING] Server error ({response.status_code}, X-Request-ID: {request_id}). Retrying in {delay:.2f} seconds (attempt {attempt + 1}/{max_retries})...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    raise Exception(f"Server error {response.status_code} after {max_retries} retries (X-Request-ID: {request_id})")
             else:
+                request_id = response.headers.get("X-Request-ID", "n/a")
+                print(f"[ERROR] Perplexity returned {response.status_code} (X-Request-ID: {request_id}): {response.text[:300]}")
                 response.raise_for_status()
             
         except requests.exceptions.Timeout:
@@ -582,35 +611,49 @@ YOU MUST OUTPUT THE HTML STRUCTURE ABOVE NO MATTER WHAT!
 9. EVEN WITH MISSING DATA, OUTPUT THE HTML FORMAT!
 """
 
-    try:
-        response = perplexity_request_with_retry(
-            api_key=api_key,
-            model="sonar-reasoning-pro",  # Using sonar-reasoning-pro for advanced reasoning and report writing
-            messages=[{"role": "user", "content": comprehensive_prompt}],
-            web_search_options={"search_context_size": "high"},  # Maximum reasoning for comprehensive analysis
-            max_retries=3
-        )
-        
-        html_report = response['choices'][0]['message']['content']
-        call2_sources = response.get('citations', [])
-        
-        # Strip <think> tags from Call 2 response
-        html_report = re.sub(r'<think>.*?</think>', '', html_report, flags=re.DOTALL).strip()
-        
-        # Strip markdown code blocks if present
-        if html_report.startswith('```'):
-            html_report = re.sub(r'^```\w*\n', '', html_report)
-            html_report = re.sub(r'\n```$', '', html_report).strip()
-        
-        # Sanitize and validate HTML
-        html_report = sanitize_and_validate_html(html_report)
-        
-        print(f"[OK] Report generated: {len(html_report)} chars, {len(call2_sources)} market sources")
-        return html_report, call2_sources
-        
-    except Exception as e:
-        print(f"[ERROR] Perplexity report generation failed: {e}")
-        return f"<div>Error generating report: {str(e)}</div>", []
+    # Try the reasoning model first; fall back to sonar-pro if it has a
+    # server-side outage (sonar-reasoning-pro has documented 500 issues).
+    last_error = None
+    for model in (REPORT_MODEL, REPORT_FALLBACK_MODEL):
+        try:
+            if model != REPORT_MODEL:
+                print(f"[FALLBACK] Retrying report generation with {model}...")
+            # reasoning_effort only applies to reasoning models; skip it for sonar-pro
+            effort = REPORT_REASONING_EFFORT if model == REPORT_MODEL else None
+            response = perplexity_request_with_retry(
+                api_key=api_key,
+                model=model,
+                messages=[{"role": "user", "content": comprehensive_prompt}],
+                web_search_options={"search_context_size": SEARCH_CONTEXT_SIZE},
+                reasoning_effort=effort,
+                max_retries=3
+            )
+            
+            html_report = response['choices'][0]['message']['content']
+            call2_sources = response.get('citations', [])
+            
+            # Strip <think> tags from Call 2 response
+            html_report = re.sub(r'<think>.*?</think>', '', html_report, flags=re.DOTALL).strip()
+            
+            # Strip markdown code blocks if present
+            if html_report.startswith('```'):
+                html_report = re.sub(r'^```\w*\n', '', html_report)
+                html_report = re.sub(r'\n```$', '', html_report).strip()
+            
+            # Sanitize and validate HTML
+            html_report = sanitize_and_validate_html(html_report)
+            
+            print(f"[OK] Report generated with {model}: {len(html_report)} chars, {len(call2_sources)} market sources")
+            return html_report, call2_sources, True
+            
+        except Exception as e:
+            last_error = e
+            print(f"[ERROR] Report generation failed with {model}: {e}")
+            continue
+    
+    # Both primary and fallback models failed
+    print(f"[ERROR] Perplexity report generation failed on all models: {last_error}")
+    return f"<div>Error generating report: {str(last_error)}</div>", [], False
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -716,9 +759,9 @@ Balance sheet: Not extracted - see Call 2
 
     sec_response = perplexity_request_with_retry(
         api_key=api_key,
-        model="sonar-reasoning-pro",  # Using sonar-reasoning-pro for SEC data extraction with reasoning
+        model=DATA_MODEL,  # sonar-pro: fast, citation-rich extraction (no CoT overhead)
         messages=[{"role": "user", "content": sec_comprehensive_query}],
-        web_search_options={"search_context_size": "high"},  # High context for comprehensive SEC data extraction
+        web_search_options={"search_context_size": SEARCH_CONTEXT_SIZE},
         max_retries=5
     )
 
@@ -728,18 +771,27 @@ Balance sheet: Not extracted - see Call 2
     import re
     sec_data = re.sub(r'<think>.*?</think>', '', sec_data, flags=re.DOTALL).strip()
     
-    # Check if Call 1 returned insufficient data
-    if len(sec_data) < 500 or "cannot" in sec_data.lower() or "not available" in sec_data.lower() or "missing critical data" in sec_data.lower():
+    # Check if Call 1 returned genuinely insufficient data.
+    # Note: only retry on explicit failure language or a very short response.
+    # Harmless phrases like "not available" can legitimately appear in real
+    # filings (e.g. "balance sheet not available"), so they must NOT trigger
+    # a costly full re-run of Call 1.
+    sec_data_lower = sec_data.lower()
+    explicit_failure = any(
+        marker in sec_data_lower
+        for marker in ("i cannot", "i'm unable", "i am unable", "missing critical data", "unable to find")
+    )
+    if len(sec_data) < 500 or explicit_failure:
         print(f"[WARNING] Call 1 may have insufficient data (only {len(sec_data)} chars). Response preview: {sec_data[:200]}...")
         # Retry once with a more specific prompt for companies with limited data
-        if "cannot" in sec_data.lower() or len(sec_data) < 300:
+        if explicit_failure or len(sec_data) < 300:
             print("[RETRY] Attempting Call 1 again with broader search...")
             sec_comprehensive_query_retry = sec_comprehensive_query + "\n\nIMPORTANT: Search more broadly. Try variations of the company name. Look for ANY recent financial data about this company from SEC filings, earnings reports, or financial statements. Include investor presentations if needed."
             sec_response_retry = perplexity_request_with_retry(
                 api_key=api_key,
-                model="sonar-reasoning-pro",
+                model=DATA_MODEL,
                 messages=[{"role": "user", "content": sec_comprehensive_query_retry}],
-                web_search_options={"search_context_size": "high"},
+                web_search_options={"search_context_size": SEARCH_CONTEXT_SIZE},
                 max_retries=2
             )
             if sec_response_retry and 'choices' in sec_response_retry:
@@ -810,14 +862,17 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
     Generate equity research report using PURE Perplexity (no OpenAI).
 
     Implementation:
-    - Call 1: sonar-reasoning-pro with SEC search mode for data extraction with reasoning
-    - Call 2: sonar-reasoning-pro with high context for analysis and HTML report generation
+    - Call 1: sonar-pro (DATA_MODEL) at medium context for fast, citation-rich
+      SEC data extraction (extraction task, no chain-of-thought needed)
+    - Call 2: sonar-reasoning-pro (REPORT_MODEL) at medium context with
+      reasoning_effort=medium for scoring + HTML report, with sonar-pro fallback
+      if the reasoning model hits a server-side outage
 
     Benefits vs OpenAI hybrid:
     - 10x cheaper (no GPT-5 costs)
-    - Faster (fewer API calls)
+    - Faster (fewer API calls + lighter model/context for extraction)
     - Simpler (single provider)
-    - Consistent reasoning model across both calls
+    - More resilient (5xx retries + model fallback)
     """
     
     # STEP 1: Validate API key
@@ -861,7 +916,7 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
         
         report_start = time.time()
         
-        report_html, call2_sources = generate_report_with_perplexity(
+        report_html, call2_sources, report_success = generate_report_with_perplexity(
             company_name=company_name,
             sec_data=perplexity_data['sec_data'],
             market_data=perplexity_data['market_data'],
@@ -871,6 +926,18 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
         
         report_time = time.time() - report_start
         total_time = time.time() - start_time
+        
+        # If report generation failed (even after fallback), surface it as a
+        # real failure instead of rendering the error string as a "report".
+        if not report_success:
+            _perplexity_circuit_breaker.record_failure()
+            print(f"[ERROR] Report generation failed after {report_time:.1f}s")
+            return {
+                "report": report_html.replace('<div>', '').replace('</div>', '').strip(),
+                "sources": [],
+                "citations": [],
+                "success": False
+            }
         
         print(f"[OK] Report generated: {report_time:.1f}s")
         print(f"[OK] Total time: {total_time:.1f}s")
@@ -890,7 +957,7 @@ def generate_financial_report_with_perplexity(company_name: str, progress_callba
             "sources": sources,
             "citations": [],
             "success": True,
-            "model_used": "Pure Perplexity (sonar-reasoning-pro x2)",
+            "model_used": f"Perplexity ({DATA_MODEL} + {REPORT_MODEL})",
             "search_used": True
         }
         
